@@ -71,5 +71,7 @@ struct VoxelHashMap {
     double max_distance_;
     int max_points_per_voxel_;
     tsl::robin_map<Voxel, VoxelBlock, VoxelHash> map_;
+
+    bool remove_far_points = false;
 };
 }  // namespace kiss_icp

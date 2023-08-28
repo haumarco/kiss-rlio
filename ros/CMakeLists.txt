@@ -51,15 +51,20 @@ if(CATKIN_DEVEL_PREFIX OR catkin_FOUND OR CATKIN_BUILD_BINARY_PACKAGE)
                rosbag
                std_msgs
                tf2
-               tf2_ros)
-  catkin_package()
-
+               tf2_ros
+               message_generation
+               roscpp)
+               
+               catkin_package()
+               
+  find_package(PCL 1.2 REQUIRED COMPONENTS common visualization io)
   # ROS1 node
   add_executable(odometry_node ros1/OdometryServer.cpp)
+  target_link_libraries(odometry_node ${PCL_LIBRARIES})
   target_include_directories(odometry_node PUBLIC include ${catkin_INCLUDE_DIRS})
   target_link_libraries(odometry_node kiss_icp::pipeline ${catkin_LIBRARIES})
   install(TARGETS odometry_node RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
-elseif(DEFINED ENV{AMENT_PREFIX_PATH})
+  elseif(DEFINED ENV{AMENT_PREFIX_PATH})
   message(STATUS "KISS-ICP-ROS2 wrapper will be compiled")
 
   find_package(ament_cmake REQUIRED)
@@ -67,11 +72,23 @@ elseif(DEFINED ENV{AMENT_PREFIX_PATH})
   find_package(rclcpp REQUIRED)
   find_package(sensor_msgs REQUIRED)
   find_package(tf2_ros REQUIRED)
+  
+  include_directories(${PCL_INCLUDE_DIRS})
+  link_directories(${PCL_LIBRARY_DIRS})
+  add_definitions(${PCL_DEFINITIONS})
+  
+  # services
+  add_service_files(
+      FILES
+      Odom_service.srv
+  )
+  generate_messages(DEPENDENCIES geometry_msgs std_msgs)
 
   # ROS2 node
   add_executable(odometry_node ros2/OdometryServer.cpp)
   target_include_directories(odometry_node PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
   target_link_libraries(odometry_node kiss_icp::pipeline)
+
   install(TARGETS odometry_node RUNTIME DESTINATION lib/${PROJECT_NAME})
   install(DIRECTORY launch rviz DESTINATION share/${PROJECT_NAME}/)
   ament_target_dependencies(odometry_node rclcpp nav_msgs sensor_msgs tf2_ros)

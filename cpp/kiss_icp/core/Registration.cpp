@@ -30,12 +30,16 @@
 #include <sophus/se3.hpp>
 #include <sophus/so3.hpp>
 #include <tuple>
+#include <iostream>
+
 
 namespace Eigen {
 using Matrix6d = Eigen::Matrix<double, 6, 6>;
 using Matrix3_6d = Eigen::Matrix<double, 3, 6>;
 using Vector6d = Eigen::Matrix<double, 6, 1>;
 }  // namespace Eigen
+
+int debug_counter{ 0 };
 
 namespace {
 
@@ -64,7 +68,11 @@ void TransformPoints(const Sophus::SE3d &T, std::vector<Eigen::Vector3d> &points
 
 Sophus::SE3d AlignClouds(const std::vector<Eigen::Vector3d> &source,
                          const std::vector<Eigen::Vector3d> &target,
-                         double th) {
+                         double th,
+                         bool &degenerate,
+                         Eigen::Matrix<double, 3, 1>  normalized_initial_guess,
+                         bool first) {
+
     auto compute_jacobian_and_residual = [&](auto i) {
         const Eigen::Vector3d residual = source[i] - target[i];
         Eigen::Matrix3_6d J_r;
@@ -93,7 +101,81 @@ Sophus::SE3d AlignClouds(const std::vector<Eigen::Vector3d> &source,
         // 2nd Lambda: Parallel reduction of the private Jacboians
         [&](ResultTuple a, const ResultTuple &b) -> ResultTuple { return a + b; });
 
-    const Eigen::Vector6d x = JTJ.ldlt().solve(-JTr);
+    Eigen::Vector6d x = JTJ.ldlt().solve(-JTr);
+
+
+//
+    if (first && false) {
+        Eigen::JacobiSVD<Eigen::Matrix<double, 6, 6>> svd_all(JTJ, Eigen::ComputeFullU | Eigen::ComputeFullV);
+        auto eigenvalues = svd_all.singularValues();
+        auto eigenvectors = svd_all.matrixU();
+        bool isDegenerate{ false };
+        double threshold = 100;
+        Eigen::Matrix<double, 6, 6> eigenvectorsCopy{ eigenvectors };
+        std::vector<double> eigenvalueThresholds(6, threshold);
+        Eigen::Matrix<double, 6, 6> projectionMatrix = Eigen::Matrix<double, 6, 6>::Identity();
+
+        int nr_degenerate = 0;
+
+        for (Eigen::Index j = 0; j < eigenvectors.cols(); j++)
+        {
+            if (eigenvalues.row(0).col(j).value() < eigenvalueThresholds[j])
+            {
+                // get first 3 elements of column j
+                // Eigen::Matrix<double, 3, 1> v = eigenvectors.col(j).head(3);
+                // auto dot = abs(v.dot(normalized_initial_guess));
+                // auto err = std::acos(dot);
+                // std::cout << "v: " << v.transpose() << std::endl;
+                // std::cout << "err: " << err << std::endl;
+                // this->solRemapCategories.row(j).col(0) = Matrix::Zero(1,1);
+                // eigenvectorsCopy.col(j) = Eigen::Matrix<double, 6, 1>::Zero(6, 1);
+                // if (abs(err) < 0.35){
+                //     std::cout << "j " << j << std::endl;
+                // }
+                nr_degenerate++;
+                isDegenerate = true;
+
+                
+            }
+
+        }
+        
+
+        // double ratio = eigenvalues.row(0).col(0).value() / eigenvalues.row(0).col(5).value();
+        // if (ratio > 10000) {
+        //     isDegenerate = true;
+        //     eigenvectorsCopy.col(5) = Eigen::Matrix<double, 6, 1>::Zero(6, 1);
+        // }
+
+        // std::cout << "min ev: " << eigenvalues.row(0).col(5).value() << std::endl;
+
+        // if (isDegenerate)
+        if (nr_degenerate > 0 && !degenerate)
+        {
+                degenerate = true;
+        // std::cout << "ratio: " << ratio << std::endl;
+            // debug_counter++;
+            // std::cout << "degenerate counter: " << debug_counter << ", nr: " << nr_degenerate << std::endl;
+            std::cout << "Eigenvectors:\n" << eigenvectors << std::endl;
+            std::cout << "Eigenvalues:\n" << eigenvalues.transpose() << std::endl;
+            // // //MELO_INFO_STREAM(message_logger::color::blue << "MAIN_Solution Remapping found a degenerate direction.");
+            // projectionMatrix = eigenvectors.transpose().inverse() * eigenvectorsCopy.transpose();
+            // std::cout << "Projection Matrix:\n" << projectionMatrix << std::endl;
+            // // std::cout << "x: " << x.transpose() << std::endl;
+            // if (!projectionMatrix.isZero()){
+            //     std::cout << "x_old: " << x.transpose() << std::endl;
+                // x = projectionMatrix * x;
+            //     std::cout << "x_new: " << x.transpose() << std::endl;
+            // }
+            // else std::cout << "Projection Matrix is zero" << std::endl;
+        } 
+        // else {
+        //     std::cout << "no degenerate directions" << eigenvectors.transpose().inverse() * eigenvectorsCopy.transpose() << std::endl;
+        // }
+    }
+//
+
+
     return Sophus::SE3d::exp(x);
 }
 
@@ -108,27 +190,37 @@ Sophus::SE3d RegisterFrame(const std::vector<Eigen::Vector3d> &frame,
                            const VoxelHashMap &voxel_map,
                            const Sophus::SE3d &initial_guess,
                            double max_correspondence_distance,
-                           double kernel) {
+                           double kernel,
+                           bool &degenerate,
+                           Eigen::Matrix<double, 3, 1> normalized_initial_guess) {
     if (voxel_map.Empty()) return initial_guess;
 
     // Equation (9)
     std::vector<Eigen::Vector3d> source = frame;
     TransformPoints(initial_guess, source);
-
+    bool first = true;
     // ICP-loop
     Sophus::SE3d T_icp = Sophus::SE3d();
     for (int j = 0; j < MAX_NUM_ITERATIONS_; ++j) {
         // Equation (10)
         const auto &[src, tgt] = voxel_map.GetCorrespondences(source, max_correspondence_distance);
         // Equation (11)
-        auto estimation = AlignClouds(src, tgt, kernel);
+        auto estimation = AlignClouds(src, tgt, kernel, degenerate, normalized_initial_guess, first);
+        first = false;
         // Equation (12)
         TransformPoints(estimation, source);
         // Update iterations
         T_icp = estimation * T_icp;
         // Termination criteria
-        if (estimation.log().norm() < ESTIMATION_THRESHOLD_) break;
+        if (estimation.log().norm() < ESTIMATION_THRESHOLD_){
+        // std::cout << "iterations: " << j << std::endl;    
+        break;
+        }
+        if (j == MAX_NUM_ITERATIONS_ - 1){
+            std::cout << "Max iterations reached" << std::endl;
+        }
     }
+    // test=1;
     // Spit the final transformation
     return T_icp * initial_guess;
 }

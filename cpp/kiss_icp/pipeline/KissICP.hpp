@@ -39,7 +39,7 @@ struct KISSConfig {
     int max_points_per_voxel = 20;
 
     // th parms
-    double min_motion_th = 0.1;
+    double min_motion_th = 0.02;
     double initial_threshold = 2.0;
 
     // Motion compensation
@@ -71,10 +71,27 @@ public:
     Sophus::SE3d GetPredictionModel() const;
     bool HasMoved();
 
+    Sophus::SE3d get_initial_guess_gtsam();
+
 public:
     // Extra C++ API to facilitate ROS debugging
     std::vector<Eigen::Vector3d> LocalMap() const { return local_map_.Pointcloud(); };
     std::vector<Sophus::SE3d> poses() const { return poses_; };
+
+    Sophus::SE3d gtsam_initial_pose;
+    Eigen::Vector3d gtsam_odom_translation;
+    Eigen::Quaterniond gtsam_odom_rotation;
+    
+    double gtsam_current_msg_time;
+    double gtsam_last_msg_time = 0;
+    double gtsam_t0 = 0;
+
+    Eigen::Vector3d sum_error=Eigen::Vector3d::Zero();
+
+    int debug_counter = 0;
+
+    bool degenerate = false;
+
 
 private:
     // KISS-ICP pipeline modules

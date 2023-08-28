@@ -32,6 +32,8 @@
 #include <utility>
 #include <vector>
 
+#include <iostream>
+
 // This parameters are not intended to be changed, therefore we do not expose it
 namespace {
 struct ResultTuple {
@@ -146,7 +148,7 @@ std::vector<Eigen::Vector3d> VoxelHashMap::Pointcloud() const {
 
 void VoxelHashMap::Update(const Vector3dVector &points, const Eigen::Vector3d &origin) {
     AddPoints(points);
-    RemovePointsFarFromLocation(origin);
+    if (remove_far_points) RemovePointsFarFromLocation(origin);
 }
 
 void VoxelHashMap::Update(const Vector3dVector &points, const Sophus::SE3d &pose) {
@@ -174,9 +176,13 @@ void VoxelHashMap::RemovePointsFarFromLocation(const Eigen::Vector3d &origin) {
     for (const auto &[voxel, voxel_block] : map_) {
         const auto &pt = voxel_block.points.front();
         const auto max_distance2 = max_distance_ * max_distance_;
-        if ((pt - origin).squaredNorm() > (max_distance2)) {
-            map_.erase(voxel);
-        }
+        // if ((pt - origin).squaredNorm() > (max_distance2)) {
+
+        //     // std::cout << "voxel: " << voxel.transpose() << std::endl;
+        //     map_.erase(voxel);
+        // }
+    
+
     }
 }
 }  // namespace kiss_icp

@@ -32,6 +32,11 @@
 #include "sensor_msgs/PointCloud2.h"
 #include "sensor_msgs/point_cloud2_iterator.h"
 
+#include <pcl/common/transforms.h>
+#include <pcl/point_cloud.h>
+#include <pcl_conversions/pcl_conversions.h>
+#include <iostream>
+
 namespace kiss_icp_ros::utils {
 using PointCloud2 = sensor_msgs::PointCloud2;
 using PointField = sensor_msgs::PointField;
@@ -73,19 +78,25 @@ auto ExtractTimestampsFromMsg(const PointCloud2 &msg, const PointField &field) {
 
     // Option 1: Timestamps are unsigned integers -> epoch time.
     if (field.name == "t" || field.name == "timestamp") {
-        sensor_msgs::PointCloud2ConstIterator<uint32_t> msg_t(msg, field.name);
-        for (size_t i = 0; i < n_points; ++i, ++msg_t) {
-            timestamps.emplace_back(static_cast<double>(*msg_t));
-        }
-        // Covert to normalized time, between 0.0 and 1.0
-        return NormalizeTimestamps(timestamps);
-    }
 
-    // Option 2: Timestamps are floating point values between 0.0 and 1.0
-    // field.name == "timestamp"
-    sensor_msgs::PointCloud2ConstIterator<double> msg_t(msg, field.name);
-    for (size_t i = 0; i < n_points; ++i, ++msg_t) {
-        timestamps.emplace_back(*msg_t);
+        // coloradar
+        if (field.name == "t"){
+            // timestamps.reserve(n_points);
+            sensor_msgs::PointCloud2ConstIterator<uint32_t> msg_t(msg, field.name);
+            for (size_t i = 0; i < n_points; ++i, ++msg_t) {
+                double t = msg.header.stamp.toSec() + 1e-9 * static_cast<uint32_t>(*msg_t);
+                // std::cout << std::setprecision(30) << "ct " << t << std::endl;
+                timestamps.emplace_back(t);
+            }
+        } else {
+        // protoquad:
+            sensor_msgs::PointCloud2ConstIterator<double> msg_t(msg, field.name);
+            for (size_t i = 0; i < n_points; ++i, ++msg_t) {
+                timestamps.emplace_back(static_cast<double>(*msg_t) *1e-9);
+                // std::cout << std::setprecision(30) << "pt " << timestamps.back() << std::endl;
+            }
+        }
+
     }
     return timestamps;
 }
@@ -167,5 +178,18 @@ PointCloud2 EigenToPointCloud2(const std::vector<Eigen::Vector3d> &points,
     FillPointCloud2Timestamp(timestamps, msg);
     return msg;
 }
+
+std::vector<Eigen::Vector3d> PCLToEigen(pcl::PointCloud<pcl::PointXYZ> pointcloud) {
+    std::vector<Eigen::Vector3d> points;
+    points.reserve(pointcloud.height * pointcloud.width);
+
+    for (size_t i = 0; i < pointcloud.size(); ++i) {
+        const pcl::PointXYZ &point = pointcloud[i];
+        points.emplace_back(point.x, point.y, point.z);
+    }
+
+    return points;
+}
+
 
 }  // namespace kiss_icp_ros::utils

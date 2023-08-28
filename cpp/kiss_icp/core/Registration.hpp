@@ -34,5 +34,8 @@ Sophus::SE3d RegisterFrame(const std::vector<Eigen::Vector3d> &frame,
                            const VoxelHashMap &voxel_map,
                            const Sophus::SE3d &initial_guess,
                            double max_correspondence_distance,
-                           double kernel);
+                           double kernel,
+                           bool &degenerate,
+                           Eigen::Matrix<double, 3, 1> normalized_initial_guess);
+
 }  // namespace kiss_icp

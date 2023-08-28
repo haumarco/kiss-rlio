@@ -28,6 +28,8 @@
 #include <sophus/se3.hpp>
 #include <vector>
 
+#include <iostream>
+
 namespace {
 /// TODO(Nacho) Explain what is the very important meaning of this param
 constexpr double mid_pose_timestamp{0.5};
@@ -44,6 +46,7 @@ std::vector<Eigen::Vector3d> DeSkewScan(const std::vector<Eigen::Vector3d> &fram
         const auto motion = Sophus::SE3d::exp((timestamps[i] - mid_pose_timestamp) * delta_pose);
         corrected_frame[i] = motion * frame[i];
     });
+    // std::cout << "frame size " << frame.size() << std::endl; 
     return corrected_frame;
 }
 }  // namespace kiss_icp
