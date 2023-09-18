@@ -114,6 +114,8 @@ private:
     ros::Publisher odom_kiss_publisher_;
     int seq=0;
     sensor_msgs::PointCloud2 lidar_msg;
+    
+    double t_last_lidar = 0.0;
 
     ros::ServiceServer odom_serice;
 

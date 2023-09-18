@@ -1,69 +1,17 @@
-# KISS-ICP: In Defense of Point-to-Point ICP – Simple, Accurate, and Robust Registration If Done the Right Way
+# RLIO-KISS-ICP
 
-[![KISS-ICP demo](https://user-images.githubusercontent.com/21349875/211829074-474bec08-0129-4e34-85e7-62265e44a7de.png)](https://user-images.githubusercontent.com/21349875/219626075-d67e9165-31a2-4a1b-8c26-9f04e7d195ec.mp4
-)
+This readme was created for the rlio adaptation of the kiss-icp, the original readme can be found [here](original_README.md).
 
-## ROS2 support
+For instructions on how to use the rlio-kiss-icp, please see the readme of the rlio repository.
 
-It was never this easy, just git clone this repo into your catkin workspace and build it:
+As I only do hard resets on the kiss-icp map one needs to set the number of iterations in the code. This should be set to a rosparam...\
+[KissICP.cpp](cpp/kiss_icp/pipeline/KissICP.cpp) line: 94
 
-```sh
-git clone https://github.com/PRBonn/kiss-icp && colcon build
-```
+## changes
 
-## ROS1 support
+The original kiss-icp was adapted to work with the rlio framework. The main changes are:
 
-It was never this easy, just git clone this repo into your catkin workspace and build it:
+- deskewing: instead of the constant velocity assumption, the kiss-icp is now subscribing to the high frequency pose publisher of the rlio framework. This allows to deskew the point clouds in the same way as [eth-lidar_undistorion](https://github.com/ethz-asl/lidar_undistortion) did it.
 
-```sh
-cd ~/catkin_ws/ && git clone https://github.com/PRBonn/kiss-icp && catkin build
-```
+- initial guess: the new code subscribes to the initial guess publisher of the rlio framework. This allows a more accurate initial guess for the icp.
 
-For more detailed instructions on the ROS wrappers, please visit this [README](ros/README.md)
-
-## Install Python API
-
-![macos](https://img.shields.io/badge/-macos-333333?style=flat&logo=apple),
-![windows](https://img.shields.io/badge/windows-333333?style=flat&logo=windows&logocolor=blue), and
-![ubuntu](https://img.shields.io/badge/ubuntu-333333?style=flat&logo=ubuntu).
-
-
-To get started, just run
-
-```sh
-pip install kiss-icp
-```
-
-Next, follow the instructions on how to run the system by typing:
-
-```sh
-kiss_icp_pipeline --help
-```
-
-This should print the following help message:
-![out](https://user-images.githubusercontent.com/21349875/193282970-25a400aa-ebcd-487a-b839-faa04eeca5b9.png)
-
-
-For advanced instructions on the Python pacakge plase see [this README](python/README.md)
-
-## Citation
-
-If you use this library for any academic work, please cite our original [paper](https://www.ipb.uni-bonn.de/wp-content/papercite-data/pdf/vizzo2023ral.pdf).
-
-```bibtex
-@article{vizzo2023ral,
-  author    = {Vizzo, Ignacio and Guadagnino, Tiziano and Mersch, Benedikt and Wiesmann, Louis and Behley, Jens and Stachniss, Cyrill},
-  title     = {{KISS-ICP: In Defense of Point-to-Point ICP -- Simple, Accurate, and Robust Registration If Done the Right Way}},
-  journal   = {IEEE Robotics and Automation Letters (RA-L)},
-  pages     = {1-8},
-  doi       = {10.1109/LRA.2023.3236571},
-  volume    = {8},
-  number    = {2},
-  year      = {2023},
-  codeurl   = {https://github.com/PRBonn/kiss-icp},
-}
-```
-
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=PRBonn/kiss-icp&type=Date)](https://star-history.com/#PRBonn/kiss-icp&Date)

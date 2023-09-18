@@ -64,7 +64,6 @@ KissICP::Vector3dVectorTuple KissICP::RegisterFrame(const std::vector<Eigen::Vec
 
     // Get motion prediction and adaptive_threshold
     const double sigma = GetAdaptiveThreshold();
-    // std::cout << "sigma: " << sigma << std::endl;
 
     // Compute initial_guess for ICP
     const auto prediction = GetPredictionModel();
@@ -75,14 +74,11 @@ KissICP::Vector3dVectorTuple KissICP::RegisterFrame(const std::vector<Eigen::Vec
 
     const auto initial_guess = get_initial_guess_gtsam();
 
-    // std::cout << "norm initial_guess: " << gtsam_odom_translation.normalized() << std::endl;
-
-    // bool degenerate = false;
 
     // Run icp
     Sophus::SE3d new_pose = kiss_icp::RegisterFrame(source,         //
                                                           local_map_,     //
-                                                          initial_guess,  ////////////////////////////////////
+                                                          initial_guess,  //
                                                           3.0 * sigma,    //
                                                           sigma / 3.0,
                                                           degenerate,
@@ -94,58 +90,9 @@ KissICP::Vector3dVectorTuple KissICP::RegisterFrame(const std::vector<Eigen::Vec
     const auto model_deviation = initial_guess.inverse() * new_pose;
     const auto model_deviation_old = initial_guess_old.inverse() * new_pose;
    
-    // const auto predicted_diff = last_pose_old.inverse() * initial_guess; ////////
-    // const auto estimated_diff = last_pose_old.inverse() * new_pose;
 
-    // double predicted_trans_diff = std::sqrt(predicted_diff.translation().x()*predicted_diff.translation().x() + predicted_diff.translation().y()*predicted_diff.translation().y() + predicted_diff.translation().z()*predicted_diff.translation().z());
-    // double estimated_trans_diff = std::sqrt(estimated_diff.translation().x()*estimated_diff.translation().x() + estimated_diff.translation().y()*estimated_diff.translation().y() + estimated_diff.translation().z()*estimated_diff.translation().z());
-    
-    // Eigen::AngleAxisd angleAxis_predicted(predicted_diff.rotationMatrix());
-    // Eigen::Vector3d rotationVector_predicted = angleAxis_predicted.angle() * angleAxis_predicted.axis();
-    // double predicted_rot_diff = rotationVector_predicted.norm();
-    // Eigen::AngleAxisd angleAxis_estimated(estimated_diff.rotationMatrix());
-    // Eigen::Vector3d rotationVector_estimated = angleAxis_estimated.angle() * angleAxis_estimated.axis();
-    // double estimated_rot_diff = rotationVector_estimated.norm();
-
-    // double trans_diff_ratio = estimated_trans_diff / predicted_trans_diff;
-    // double rot_diff_ratio = estimated_rot_diff / predicted_rot_diff;
-    // std::cout << "trans_diff_ratio: " << trans_diff_ratio << std::endl;
-    // std::cout << "rot_diff_ratio: " << rot_diff_ratio << std::endl;
-
-    // if(trans_diff_ratio < 0.33 || trans_diff_ratio > 3){
-    // // if(trans_diff_ratio > 3){
-    //     std::cout << "dont trust lidar translation: "<< trans_diff_ratio << " : " << predicted_trans_diff  << std::endl;
-    //     // new_pose = Sophus::SE3d(initial_guess);
-    //     // new_pose = initial_guess;
-    //     degenerate = true;
-    // }
-
-    // if(rot_diff_ratio < 0.33 || rot_diff_ratio > 3){
-    // // if(rot_diff_ratio > 3){
-    //     std::cout << "dont trust lidar rotation" << rot_diff_ratio << " : " << predicted_rot_diff << std::endl;
-    //     // new_pose = Sophus::SE3d(initial_guess);
-    //     // new_pose = initial_guess;
-    //     degenerate = true;
-    // }
-
-
-    // std::cout << "model deviation old;" << model_deviation_old.translation().x() << ";" << model_deviation_old.translation().y() << ";" << model_deviation_old.translation().z() << std::endl;
-    // std::cout << "model deviation;" << model_deviation.translation().x() << ";" << model_deviation.translation().y() << ";" << model_deviation.translation().z() << std::endl;
-    
-
-
-    // double model_dev_rms = std::sqrt(model_deviation.translation().x()*model_deviation.translation().x() + model_deviation.translation().y()*model_deviation.translation().y() + model_deviation.translation().z()*model_deviation.translation().z());
-    // Eigen::AngleAxisd angleAxis(model_deviation.rotationMatrix());
-    // Eigen::Vector3d rotationVector = angleAxis.angle() * angleAxis.axis();
-    // // Compute the magnitude of the rotation vector to get the error
-    // double error = rotationVector.norm();
-    // std::cout << "trans model dev: " << model_dev_rms << std::endl;
-    // std::cout << "rot model dev: " << error << std::endl;
-
-    // std::cout << "initial_guess: " << predicted_diff.translation().x() << ";" << predicted_diff.translation().y() << ";" << predicted_diff.translation().z() << std::endl;
-
-    // ATTENTION
     if (poses_.size() % 100000 == 0) {
+    // if (poses_.size() % 100 == 0) {
         local_map_.Clear();
     }
     adaptive_threshold_.UpdateModelDeviation(model_deviation);
@@ -182,16 +129,6 @@ bool KissICP::HasMoved() {
 }
 
 
-// with this approach I givbe the gtsam position as a prior
-// Sophus::SE3d KissICP::get_initial_guess_gtsam() {
-
-//     double dt = gtsam_current_msg_time - gtsam_last_msg_time;
-//     gtsam_last_msg_time = gtsam_current_msg_time;
-
-//     Sophus::SE3d transformation_change(Sophus::SO3d::exp(gtsam_odom_rotation*dt), gtsam_odom_translation*dt);
-
-//     return gtsam_initial_pose * transformation_change;
-// }
 
  
 Sophus::SE3d KissICP::get_initial_guess_gtsam() {

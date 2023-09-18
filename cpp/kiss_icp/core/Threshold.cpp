@@ -44,9 +44,6 @@ double AdaptiveThreshold::ComputeThreshold() {
         model_error_sse2_ += model_error * model_error;
         num_samples_++;
     }
-    // std::cout << "model error: " << model_error << std::endl;
-    // std::cout << "model e sse2: " << model_error_sse2_ << std::endl;
-    // std::cout << "adapt thresh: " << std::sqrt(model_error_sse2_ / num_samples_) << std::endl;
 
     if (num_samples_ < 1) {
         return initial_threshold_;
